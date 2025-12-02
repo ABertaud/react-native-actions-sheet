@@ -835,7 +835,7 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
                   start.y,
                 ),
               );
-
+              console.log(isTouchInScrollableArea);
             if (isTouchInScrollableArea) {
               scrollable(true);
               blockPan = true;

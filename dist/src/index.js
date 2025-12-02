@@ -678,6 +678,7 @@ export default forwardRef(function ActionSheet(_a, ref) {
                         activeDraggableNodes.some(function (node) {
                             return isTouchWithinNodeBounds(node.rectWithBoundary, start.y);
                         });
+                    console.log(isTouchInScrollableArea);
                     if (isTouchInScrollableArea) {
                         scrollable(true);
                         blockPan = true;
