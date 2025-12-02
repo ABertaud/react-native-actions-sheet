@@ -38,6 +38,13 @@
     "url": "https://github.com/ammarahm-ed/react-native-actions-sheet/issues/"
   },
   "homepage": "https://github.com/ammarahm-ed/react-native-actions-sheet",
+  "files": [
+    "dist",
+    "src",
+    "index.ts",
+    "README.md",
+    "LICENSE"
+  ],
   "peerDependencies": {
     "react-native": "*",
     "react-native-gesture-handler": "*",
