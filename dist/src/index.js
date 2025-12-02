@@ -620,6 +620,7 @@ export default forwardRef(function ActionSheet(_a, ref) {
         }
         var blockPan = false;
         var onChange = function (absoluteX, absoluteY, translationY) {
+            var _a, _b, _c;
             if (!gestureEnabled)
                 return;
             var deltaY = translationY;
@@ -640,20 +641,22 @@ export default forwardRef(function ActionSheet(_a, ref) {
             var returnAllNodes = !isFullOpen || (isFullOpen && !isSwipingDown);
             var activeDraggableNodes = getActiveDraggableNodes(start.x, start.y, returnAllNodes);
             // DEBUG: Log gesture state
+            var allNodes = getActiveDraggableNodes(start.x, start.y, true);
+            var touchInsideScrollable = allNodes.some(function (n) {
+                return start.y >= n.rectWithBoundary.py &&
+                    start.y <= n.rectWithBoundary.boundryY;
+            });
             console.log('[GESTURE DEBUG]', {
-                touchStart: { x: start.x, y: start.y },
+                touchY: Math.round(start.y),
+                scrollableArea: allNodes.length > 0
+                    ? {
+                        top: Math.round(allNodes[0].rectWithBoundary.py),
+                        bottom: Math.round(allNodes[0].rectWithBoundary.boundryY),
+                    }
+                    : null,
+                touchInsideScrollable: touchInsideScrollable,
+                scrollOffset: (_c = (_b = (_a = allNodes[0]) === null || _a === void 0 ? void 0 : _a.node.offset.current) === null || _b === void 0 ? void 0 : _b.y) !== null && _c !== void 0 ? _c : 0,
                 isFullOpen: isFullOpen,
-                isSwipingDown: isSwipingDown,
-                returnAllNodes: returnAllNodes,
-                activeDraggableNodesCount: activeDraggableNodes.length,
-                nodeRects: activeDraggableNodes.map(function (n) {
-                    var _a;
-                    return ({
-                        py: n.rectWithBoundary.py,
-                        boundryY: n.rectWithBoundary.boundryY,
-                        offset: (_a = n.node.offset.current) === null || _a === void 0 ? void 0 : _a.y,
-                    });
-                }),
             });
             if (enableGesturesInScrollView &&
                 activeDraggableNodes.length > 0 &&

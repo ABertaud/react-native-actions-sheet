@@ -791,17 +791,26 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
         );
 
         // DEBUG: Log gesture state
+        const allNodes = getActiveDraggableNodes(start.x, start.y, true);
+        const touchInsideScrollable = allNodes.some(
+          n =>
+            start.y >= n.rectWithBoundary.py &&
+            start.y <= (n.rectWithBoundary as RectWithBoundary).boundryY,
+        );
         console.log('[GESTURE DEBUG]', {
-          touchStart: {x: start.x, y: start.y},
+          touchY: Math.round(start.y),
+          scrollableArea:
+            allNodes.length > 0
+              ? {
+                  top: Math.round(allNodes[0].rectWithBoundary.py),
+                  bottom: Math.round(
+                    (allNodes[0].rectWithBoundary as RectWithBoundary).boundryY,
+                  ),
+                }
+              : null,
+          touchInsideScrollable,
+          scrollOffset: allNodes[0]?.node.offset.current?.y ?? 0,
           isFullOpen,
-          isSwipingDown,
-          returnAllNodes,
-          activeDraggableNodesCount: activeDraggableNodes.length,
-          nodeRects: activeDraggableNodes.map(n => ({
-            py: n.rectWithBoundary.py,
-            boundryY: (n.rectWithBoundary as RectWithBoundary).boundryY,
-            offset: n.node.offset.current?.y,
-          })),
         });
 
         if (
