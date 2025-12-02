@@ -2,13 +2,10 @@
   "include": ["index.ts"],
   "compilerOptions": {
     "baseUrl": "./",
-    "jsx": "react-native",
     "module": "esnext",
     "moduleResolution": "node",
     "lib": ["es2017", "DOM"],
-    "declaration": true,
     "declarationMap": true,
-    "outDir": "./dist",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
@@ -21,7 +18,11 @@
     "skipLibCheck": true,
     "strict": false,
     "allowJs": true,
-    "incremental": false
+    "incremental": false,
+    "noEmit": false,
+    "outDir": "./dist",
+    "declaration": true,
+    "jsx": "react-native"
   },
   "exclude": ["./example", "./expo-example", "./dist", "./docs", "./assets"]
 }
