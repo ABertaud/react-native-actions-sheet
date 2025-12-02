@@ -716,14 +716,15 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
       let prevDeltaY = 0;
       let deltaYOnGestureStart = 0;
       let velocity = 0;
-      let start: {
-        x: number;
-        y: number;
-      };
+      let start:
+        | {
+            x: number;
+            y: number;
+          }
+        | undefined;
       let oldValue = 0;
       let isRefreshing = false;
       const offsets: number[] = [];
-      let previousScrollOffsets: Map<NodesRef['0']['ref'], number> = new Map();
 
       function scrollable(value: boolean) {
         for (let i = 0; i < draggableNodes.current.length; i++) {
@@ -772,13 +773,6 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
             x: absoluteX,
             y: absoluteY,
           };
-          // Store scroll offsets at gesture start
-          previousScrollOffsets = new Map(
-            draggableNodes.current.map(node => [
-              node.ref,
-              node.offset.current.y || 0,
-            ]),
-          );
         }
 
         const isFullOpen = getCurrentPosition() === 0;
@@ -790,51 +784,18 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
           returnAllNodes,
         );
 
-        // DEBUG: Log gesture state
-        const allNodes = getActiveDraggableNodes(start.x, start.y, true);
-        const touchInsideScrollable = allNodes.some(
-          n =>
-            start.y >= n.rectWithBoundary.py &&
-            start.y <= (n.rectWithBoundary as RectWithBoundary).boundryY,
-        );
-        console.log('[GESTURE DEBUG]', {
-          touchY: Math.round(start.y),
-          scrollableArea:
-            allNodes.length > 0
-              ? {
-                  top: Math.round(allNodes[0].rectWithBoundary.py),
-                  bottom: Math.round(
-                    (allNodes[0].rectWithBoundary as RectWithBoundary).boundryY,
-                  ),
-                }
-              : null,
-          touchInsideScrollable,
-          scrollOffset: allNodes[0]?.node.offset.current?.y ?? 0,
-          isFullOpen,
-        });
-
         if (
           enableGesturesInScrollView &&
           activeDraggableNodes.length > 0 &&
           !isRefreshing
         ) {
-          // Check if scroll is actively changing during the gesture (not just having an offset)
-          const nodeIsScrolling = activeDraggableNodes.some(node => {
-            const currentOffset = node.node.offset.current.y || 0;
-            const previousOffset =
-              previousScrollOffsets.get(node.node.ref) ?? currentOffset;
-            const isActuallyScrolling = currentOffset !== previousOffset;
-            previousScrollOffsets.set(node.node.ref, currentOffset);
-            return isActuallyScrolling;
-          });
-
           /**
            * Draggable nodes handling cases:
            * 1. Sheet not fully open, swiping up: allow pan (sheet moves up)
            * 2. Sheet fully open, swiping up: allow scroll (content scrolls)
-           * 3. Sheet not fully open OR fully open, swiping down:
-           *    - If scroll is active AND touch is in scrollable area: allow scroll
-           *    - Otherwise: allow pan (sheet moves down / closes)
+           * 3. Swiping down:
+           *    - If touch is IN scrollable area AND it has scrolled content: allow scroll
+           *    - If touch is OUTSIDE scrollable area: allow pan (close sheet)
            * 4. Refresh control: if in refresh zone, allow scroll for pull-to-refresh
            */
 
@@ -850,25 +811,21 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
               blockPan = false;
             }
           } else {
-            // Swiping down (cases 3 & 4)
-            const isTouchInScrollableArea =
-              nodeIsScrolling &&
-              activeDraggableNodes.some(node =>
-                isTouchWithinNodeBounds(
+            // Swiping down (case 3)
+            // Check if touch is inside a scrollable area that has scrolled content
+            const touchInScrollableWithContent = activeDraggableNodes.some(
+              node => {
+                const isInsideBounds = isTouchWithinNodeBounds(
                   node.rectWithBoundary as RectWithBoundary,
                   start.y,
-                ),
-              );
+                );
+                const hasScrolledContent =
+                  (node.node.offset.current?.y || 0) > 0;
+                return isInsideBounds && hasScrolledContent;
+              },
+            );
 
-            // DEBUG: Log swiping down decision
-            console.log('[SWIPE DOWN DEBUG]', {
-              nodeIsScrolling,
-              isTouchInScrollableArea,
-              touchY: start.y,
-              willBlockPan: isTouchInScrollableArea,
-            });
-
-            if (isTouchInScrollableArea) {
+            if (touchInScrollableWithContent) {
               scrollable(true);
               blockPan = true;
             } else {
@@ -958,6 +915,7 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
       const onEnd = () => {
         if (!gestureEnabled) return;
         deltaYOnGestureStart = 0;
+        start = undefined;
         const isMovingUp = getCurrentPosition() < initialValue.current;
 
         scrollable(true);
