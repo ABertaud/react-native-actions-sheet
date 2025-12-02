@@ -124,10 +124,10 @@ export function useScrollHandlers(options) {
     var onScroll = React.useCallback(function (event) {
         var _a = event.nativeEvent.contentOffset, x = _a.x, y = _a.y;
         var maxOffsetX = event.nativeEvent.contentSize.width - layout.current.w;
-        var maxOffsetY = event.nativeEvent.contentSize.height - layout.current.h;
+        // Store actual offset values, use END only for horizontal scroll edge detection
         offset.current = {
             x: x === maxOffsetX || x > maxOffsetX - 5 ? ScrollState.END : x,
-            y: y === maxOffsetY || y > maxOffsetY - 5 ? ScrollState.END : y,
+            y: y, // Always store actual Y offset to prevent position confusion
         };
     }, []);
     return {
