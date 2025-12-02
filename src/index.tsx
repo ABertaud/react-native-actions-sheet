@@ -111,6 +111,7 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
         overshootClamping: true,
       },
       onRequestClose,
+      animatedPosition,
       ...props
     },
     ref,
@@ -181,7 +182,10 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
 
     const opacity = useSharedValue(0);
     const actionSheetOpacity = useSharedValue(1);
-    const translateY = useSharedValue(Dimensions.get('window').height * 2);
+    const internalTranslateY = useSharedValue(
+      Dimensions.get('window').height * 2,
+    );
+    const translateY = animatedPosition || internalTranslateY;
     const underlayTranslateY = useSharedValue(130);
     const routeOpacity = useSharedValue(0);
     const router = useRouter({
@@ -665,6 +669,17 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
       return {w: 0, h: 0, px: 0, py: 0, x: 0, y: 0, boundryX: 0, boundryY: 0};
     }
 
+    type RectWithBoundary = LayoutRect & {boundryX: number; boundryY: number};
+
+    function isTouchWithinNodeBounds(
+      rectWithBoundary: RectWithBoundary,
+      touchY: number,
+    ): boolean {
+      return (
+        touchY >= rectWithBoundary.py && touchY <= rectWithBoundary.boundryY
+      );
+    }
+
     const getActiveDraggableNodes = React.useCallback(
       (absoluteX: number, absoluteY: number, returnAllNodes?: boolean) => {
         if (draggableNodes.current?.length === 0) return [];
@@ -708,6 +723,7 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
       let oldValue = 0;
       let isRefreshing = false;
       const offsets: number[] = [];
+      let previousScrollOffsets: Map<NodesRef['0']['ref'], number> = new Map();
 
       function scrollable(value: boolean) {
         for (let i = 0; i < draggableNodes.current.length; i++) {
@@ -756,6 +772,13 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
             x: absoluteX,
             y: absoluteY,
           };
+          // Store scroll offsets at gesture start
+          previousScrollOffsets = new Map(
+            draggableNodes.current.map(node => [
+              node.ref,
+              node.offset.current.y || 0,
+            ]),
+          );
         }
 
         const isFullOpen = getCurrentPosition() === 0;
@@ -771,74 +794,79 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
           activeDraggableNodes.length > 0 &&
           !isRefreshing
         ) {
-          const nodeIsScrolling = activeDraggableNodes.some(
-            node => node.node.offset.current.y !== 0,
-          );
+          // Check if scroll is actively changing during the gesture (not just having an offset)
+          const nodeIsScrolling = activeDraggableNodes.some(node => {
+            const currentOffset = node.node.offset.current.y || 0;
+            const previousOffset =
+              previousScrollOffsets.get(node.node.ref) ?? currentOffset;
+            const isActuallyScrolling = currentOffset !== previousOffset;
+            previousScrollOffsets.set(node.node.ref, currentOffset);
+            return isActuallyScrolling;
+          });
 
           /**
            * Draggable nodes handling cases:
-           *
-           * 1. Sheet not fully open, swiping up, scrolling: false panning: true (will transition to scrolling once sheet reaches top position)
-           * 2. Sheet fully open, swiping up, scrolling: true, panning: false
-           * 3. Sheet not fully open, swiping down, scrolling: false, panning: true
-           * 4. Sheet fully open, scroll offset > 0, scrolling: true, panning: false will transition into scrolling: false, panning: true, once scroll reaches offset=0
-           * 5. Add support for pull to refresh
+           * 1. Sheet not fully open, swiping up: allow pan (sheet moves up)
+           * 2. Sheet fully open, swiping up: allow scroll (content scrolls)
+           * 3. Sheet not fully open OR fully open, swiping down:
+           *    - If scroll is active AND touch is in scrollable area: allow scroll
+           *    - Otherwise: allow pan (sheet moves down / closes)
+           * 4. Refresh control: if in refresh zone, allow scroll for pull-to-refresh
            */
 
-          // 1. Sheet not fully open, swiping up, scrolling: false panning: true (will transition to scrolling once sheet reaches top position)
-          if (!isFullOpen && !isSwipingDown) {
-            scrollable(false);
-            blockPan = false;
-          }
+          if (!isSwipingDown) {
+            // Swiping up
+            if (isFullOpen) {
+              // Case 2: Sheet fully open, allow scroll
+              scrollable(true);
+              blockPan = true;
+            } else {
+              // Case 1: Sheet not fully open, allow pan to expand sheet
+              scrollable(false);
+              blockPan = false;
+            }
+          } else {
+            // Swiping down (cases 3 & 4)
+            const isTouchInScrollableArea =
+              nodeIsScrolling &&
+              activeDraggableNodes.some(node =>
+                isTouchWithinNodeBounds(
+                  node.rectWithBoundary as RectWithBoundary,
+                  start.y,
+                ),
+              );
 
-          // 2. Sheet fully open, swiping up, scrolling: true, panning: false
-          if (isFullOpen && !isSwipingDown) {
-            scrollable(true);
-            blockPan = true;
-          }
-          //  3. Sheet not fully open, swiping down, scrolling: false, panning: true
-          if (!isFullOpen && isSwipingDown) {
-            if (nodeIsScrolling) {
+            if (isTouchInScrollableArea) {
               scrollable(true);
               blockPan = true;
             } else {
               scrollable(false);
               blockPan = false;
-            }
-          }
 
-          // 4. Sheet fully open, scroll offset > 0, scrolling: true, panning: false will transition into scrolling: false, panning: true, once scroll reaches offset=0
-          if (isFullOpen && isSwipingDown) {
-            if (nodeIsScrolling) {
-              scrollable(true);
-              blockPan = true;
-            } else {
-              if (!deltaYOnGestureStart && deltaY > 0) {
-                deltaYOnGestureStart = deltaY;
-              }
-              const hasRefreshControl = activeDraggableNodes.some(
-                node => node.node.handlerConfig.hasRefreshControl,
-              );
-              if (hasRefreshControl) {
+              // Check for refresh control (only when sheet is fully open)
+              if (isFullOpen) {
+                if (!deltaYOnGestureStart && deltaY > 0) {
+                  deltaYOnGestureStart = deltaY;
+                }
+
                 for (const node of activeDraggableNodes) {
                   if (node.node.handlerConfig.hasRefreshControl) {
-                    // Refresh Control will work in to 15% area of the DraggableNode.
                     const refreshControlBounds =
                       node.rectWithBoundary.py +
                       node.rectWithBoundary.h *
                         node.node.handlerConfig.refreshControlBoundary;
 
-                    if (!refreshControlBounds) continue;
-                    if (absoluteY < refreshControlBounds) {
+                    if (
+                      refreshControlBounds &&
+                      absoluteY < refreshControlBounds
+                    ) {
                       scrollable(true);
                       blockPan = true;
                       isRefreshing = true;
+                      break;
                     }
                   }
                 }
-              } else {
-                scrollable(false);
-                blockPan = false;
               }
             }
           }
@@ -848,6 +876,7 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
         ) {
           blockPan = true;
         } else {
+          // No active draggable nodes or gestures disabled - allow sheet to move
           blockPan = false;
         }
 
@@ -864,7 +893,9 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
           oldValue = value;
         }
 
-        if (blockPan) return;
+        if (blockPan) {
+          return;
+        }
 
         velocity = 1;
         const correctedValue =
@@ -921,12 +952,6 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
       return Platform.OS === 'web'
         ? PanResponder.create({
             onMoveShouldSetPanResponder: (_event, gesture) => {
-              let vy = gesture.vy < 0 ? gesture.vy * -1 : gesture.vy;
-              let vx = gesture.vx < 0 ? gesture.vx * -1 : gesture.vx;
-              if (vy < 0.05 || vx > 0.05) {
-                return false;
-              }
-
               const activeDraggableNodes = getActiveDraggableNodes(
                 _event.nativeEvent.pageX,
                 _event.nativeEvent.pageY,
@@ -1330,13 +1355,22 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
                                 },
                                 props.containerStyle,
                                 {
-                                  maxHeight: keyboard.keyboardShown
-                                    ? dimensions.height -
-                                      insets.top -
-                                      keyboard.keyboardHeight
-                                    : dimensions.height - insets.top,
+                                  maxHeight: drawUnderStatusBar
+                                    ? keyboard.keyboardShown
+                                      ? dimensions.height -
+                                        keyboard.keyboardHeight
+                                      : dimensions.height
+                                    : keyboard.keyboardShown
+                                      ? dimensions.height -
+                                        insets.top -
+                                        keyboard.keyboardHeight
+                                      : dimensions.height - insets.top,
                                   // Using this to trigger layout when keyboard is shown
-                                  marginTop: keyboard.keyboardShown ? 0.5 : 0,
+                                  marginTop: keyboard.keyboardShown
+                                    ? 0.5
+                                    : drawUnderStatusBar
+                                      ? -2
+                                      : 0,
                                   paddingBottom:
                                     (Platform.OS === 'ios' &&
                                       keyboard.keyboardShown) ||

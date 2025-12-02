@@ -6,6 +6,7 @@ import {
   StyleProp,
   ViewStyle,
 } from 'react-native';
+import {SharedValue} from 'react-native-reanimated';
 import {SpringConfig} from 'react-native-reanimated/lib/typescript/animation/springUtils';
 import EventManager from './eventmanager';
 import {Route} from './hooks/use-router';
@@ -424,7 +425,12 @@ export type ActionSheetProps<SheetId extends keyof Sheets = never> = {
    * sheet to go beyond minimum snap point position with drag.
    */
   disableDragBeyondMinimumSnapPoint?: boolean;
-
+  /**
+   * Animated value to be used as a callback for the position node internally.
+   * Use this for pixel-perfect animations synchronized with the sheet.
+   * If provided, this SharedValue will be used directly instead of creating an internal one.
+   */
+  animatedPosition?: SharedValue<number>;
   /**
    * Called when the ActionSheet is closing based on some user actions:
    *

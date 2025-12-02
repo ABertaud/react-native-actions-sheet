@@ -1,5 +1,5 @@
 /* eslint-disable curly */
-import React, {RefObject, useImperativeHandle} from 'react';
+import React, {RefObject, useImperativeHandle, useState} from 'react';
 import {FlatList as RNGHFlatList} from 'react-native-gesture-handler';
 import {useScrollHandlers} from '../hooks/use-scroll-handlers';
 import {FlatListProps} from 'react-native';
@@ -19,6 +19,7 @@ function $FlatList<T>(props: Props<T>, ref: RefObject<RNGHFlatList>) {
     refreshControlBoundary: props.refreshControlGestureArea || 0.15,
   });
   useImperativeHandle(ref, () => handlers.ref.current);
+  const [bounces, setBounces] = useState(false);
 
   return (
     <RNGHFlatList
@@ -27,6 +28,9 @@ function $FlatList<T>(props: Props<T>, ref: RefObject<RNGHFlatList>) {
       simultaneousHandlers={handlers.simultaneousHandlers}
       scrollEventThrottle={handlers.scrollEventThrottle}
       onScroll={event => {
+        const offsetY = event.nativeEvent.contentOffset.y;
+        if (offsetY > 0 && !bounces) setBounces(true);
+        if (offsetY <= 0 && bounces) setBounces(false);
         handlers.onScroll(event);
         props.onScroll?.(event);
       }}
@@ -34,7 +38,7 @@ function $FlatList<T>(props: Props<T>, ref: RefObject<RNGHFlatList>) {
         handlers.onLayout();
         props.onLayout?.(event);
       }}
-      bounces={false}
+      bounces={bounces}
     />
   );
 }

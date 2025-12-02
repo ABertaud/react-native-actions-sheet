@@ -2,6 +2,7 @@ import React, {useCallback} from 'react';
 import {Text, View} from 'react-native';
 import ActionSheet, {FlatList, useSheetRef} from 'react-native-actions-sheet';
 import {Button} from '../components/button';
+import {useAnimatedStyle, useSharedValue} from 'react-native-reanimated';
 
 function FlatListSheet() {
   const ref = useSheetRef();
@@ -95,8 +96,9 @@ function FlatListSheet() {
         style={{
           paddingHorizontal: 12,
           gap: 10,
-          maxHeight: '100%'
+          maxHeight: '100%',
         }}>
+        <View style={{height: 100, backgroundColor: 'red'}} />
         <FlatList
           data={vegetableNamesWithEmoji}
           ListHeaderComponent={

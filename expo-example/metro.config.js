@@ -28,6 +28,13 @@ const config = {
        '@legendapp/list': path.resolve(__dirname, 'node_modules/@legendapp/list')
     },
     resolveRequest: (context, moduleName, platform) => {
+      if (moduleName === 'react-native-actions-sheet') {
+        return {
+          filePath: path.resolve(moduleRoot, 'index.ts'),
+          type: 'sourceFile',
+        };
+      }
+
       if (moduleName === 'react-native-safe-area-context') {
         return {
           filePath: path.resolve(

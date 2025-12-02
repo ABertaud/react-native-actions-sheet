@@ -1,5 +1,5 @@
 /* eslint-disable curly */
-import React, { RefObject, useImperativeHandle } from 'react';
+import React, { RefObject, useImperativeHandle, useState } from 'react';
 import {
   ScrollView as RNScrollView,
   ScrollViewProps
@@ -27,6 +27,7 @@ function $ScrollView(
     refreshControlBoundary: props.refreshControlGestureArea || 0.15,
   });
   useImperativeHandle(ref, () => handlers.ref.current);
+  const [bounces, setBounces] = useState(false);
 
   return (
     <RNGHScrollView
@@ -35,6 +36,9 @@ function $ScrollView(
       simultaneousHandlers={handlers.simultaneousHandlers}
       scrollEventThrottle={handlers.scrollEventThrottle}
       onScroll={event => {
+        const offsetY = event.nativeEvent.contentOffset.y;
+        if (offsetY > 0 && !bounces) setBounces(true);
+        if (offsetY <= 0 && bounces) setBounces(false);
         handlers.onScroll(event);
         props.onScroll?.(event);
       }}
@@ -42,7 +46,7 @@ function $ScrollView(
         handlers.onLayout();
         props.onLayout?.(event);
       }}
-      bounces={false}
+      bounces={bounces}
     />
   );
 }
