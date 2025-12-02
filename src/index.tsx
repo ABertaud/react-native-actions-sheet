@@ -951,7 +951,7 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
 
       return Platform.OS === 'web'
         ? PanResponder.create({
-            onMoveShouldSetPanResponder: (_event, gesture) => {
+            onMoveShouldSetPanResponder: (_event, _gesture) => {
               const activeDraggableNodes = getActiveDraggableNodes(
                 _event.nativeEvent.pageX,
                 _event.nativeEvent.pageY,
