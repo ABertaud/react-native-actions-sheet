@@ -98,7 +98,11 @@ function FlatListSheet() {
           gap: 10,
           maxHeight: '100%',
         }}>
-        <View style={{height: 100, backgroundColor: 'red'}} />
+        <View style={{height: 200, backgroundColor: 'red'}}>
+          <Text style={{color: 'white', padding: 20, fontSize: 16}}>
+            HEADER (200px) - Swipe ici devrait fermer la sheet
+          </Text>
+        </View>
         <FlatList
           data={vegetableNamesWithEmoji}
           ListHeaderComponent={

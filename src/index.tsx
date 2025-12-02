@@ -782,12 +782,27 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
         }
 
         const isFullOpen = getCurrentPosition() === 0;
+        const returnAllNodes = !isFullOpen || (isFullOpen && !isSwipingDown);
 
         const activeDraggableNodes = getActiveDraggableNodes(
           start.x,
           start.y,
-          !isFullOpen || (isFullOpen && !isSwipingDown),
+          returnAllNodes,
         );
+
+        // DEBUG: Log gesture state
+        console.log('[GESTURE DEBUG]', {
+          touchStart: {x: start.x, y: start.y},
+          isFullOpen,
+          isSwipingDown,
+          returnAllNodes,
+          activeDraggableNodesCount: activeDraggableNodes.length,
+          nodeRects: activeDraggableNodes.map(n => ({
+            py: n.rectWithBoundary.py,
+            boundryY: (n.rectWithBoundary as RectWithBoundary).boundryY,
+            offset: n.node.offset.current?.y,
+          })),
+        });
 
         if (
           enableGesturesInScrollView &&
@@ -835,7 +850,15 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
                   start.y,
                 ),
               );
-              console.log(isTouchInScrollableArea);
+
+            // DEBUG: Log swiping down decision
+            console.log('[SWIPE DOWN DEBUG]', {
+              nodeIsScrolling,
+              isTouchInScrollableArea,
+              touchY: start.y,
+              willBlockPan: isTouchInScrollableArea,
+            });
+
             if (isTouchInScrollableArea) {
               scrollable(true);
               blockPan = true;

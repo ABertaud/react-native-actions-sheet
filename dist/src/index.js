@@ -637,7 +637,24 @@ export default forwardRef(function ActionSheet(_a, ref) {
                 ]; }));
             }
             var isFullOpen = getCurrentPosition() === 0;
-            var activeDraggableNodes = getActiveDraggableNodes(start.x, start.y, !isFullOpen || (isFullOpen && !isSwipingDown));
+            var returnAllNodes = !isFullOpen || (isFullOpen && !isSwipingDown);
+            var activeDraggableNodes = getActiveDraggableNodes(start.x, start.y, returnAllNodes);
+            // DEBUG: Log gesture state
+            console.log('[GESTURE DEBUG]', {
+                touchStart: { x: start.x, y: start.y },
+                isFullOpen: isFullOpen,
+                isSwipingDown: isSwipingDown,
+                returnAllNodes: returnAllNodes,
+                activeDraggableNodesCount: activeDraggableNodes.length,
+                nodeRects: activeDraggableNodes.map(function (n) {
+                    var _a;
+                    return ({
+                        py: n.rectWithBoundary.py,
+                        boundryY: n.rectWithBoundary.boundryY,
+                        offset: (_a = n.node.offset.current) === null || _a === void 0 ? void 0 : _a.y,
+                    });
+                }),
+            });
             if (enableGesturesInScrollView &&
                 activeDraggableNodes.length > 0 &&
                 !isRefreshing) {
@@ -678,7 +695,13 @@ export default forwardRef(function ActionSheet(_a, ref) {
                         activeDraggableNodes.some(function (node) {
                             return isTouchWithinNodeBounds(node.rectWithBoundary, start.y);
                         });
-                    console.log(isTouchInScrollableArea);
+                    // DEBUG: Log swiping down decision
+                    console.log('[SWIPE DOWN DEBUG]', {
+                        nodeIsScrolling: nodeIsScrolling,
+                        isTouchInScrollableArea: isTouchInScrollableArea,
+                        touchY: start.y,
+                        willBlockPan: isTouchInScrollableArea,
+                    });
                     if (isTouchInScrollableArea) {
                         scrollable(true);
                         blockPan = true;
