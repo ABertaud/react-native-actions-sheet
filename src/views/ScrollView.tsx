@@ -27,7 +27,8 @@ function $ScrollView(
     refreshControlBoundary: props.refreshControlGestureArea || 0.15,
   });
   useImperativeHandle(ref, () => handlers.ref.current);
-  const [bounces, setBounces] = useState(false);
+  const [bounces, setBounces] = useState(true);
+  const isInteractingRef = React.useRef(false);
 
   return (
     <RNGHScrollView
@@ -35,10 +36,36 @@ function $ScrollView(
       ref={handlers.ref}
       simultaneousHandlers={handlers.simultaneousHandlers}
       scrollEventThrottle={handlers.scrollEventThrottle}
-      onScroll={event => {
+      onScrollBeginDrag={event => {
+        isInteractingRef.current = true;
+        // Enable bounces whenever we start scrolling
+        setBounces(true);
+        props.onScrollBeginDrag?.(event);
+      }}
+      onScrollEndDrag={event => {
+        const velocity = event.nativeEvent.velocity?.y || 0;
+        const hasNegativeVelocity = Math.abs(velocity) > 0.1;
+        
+        // If no momentum, interaction might be ending
+        if (!hasNegativeVelocity) {
+          const offsetY = event.nativeEvent.contentOffset.y;
+          if (offsetY <= 0) {
+            isInteractingRef.current = false;
+            setBounces(false);
+          }
+        }
+        props.onScrollEndDrag?.(event);
+      }}
+      onMomentumScrollEnd={event => {
+        isInteractingRef.current = false;
         const offsetY = event.nativeEvent.contentOffset.y;
-        if (offsetY > 0 && !bounces) setBounces(true);
-        if (offsetY <= 0 && bounces) setBounces(false);
+        // Disable bounce only if we're at the top
+        if (offsetY <= 0) {
+          setBounces(false);
+        }
+        props.onMomentumScrollEnd?.(event);
+      }}
+      onScroll={event => {
         handlers.onScroll(event);
         props.onScroll?.(event);
       }}
@@ -47,6 +74,7 @@ function $ScrollView(
         props.onLayout?.(event);
       }}
       bounces={bounces}
+      alwaysBounceVertical={false}
     />
   );
 }

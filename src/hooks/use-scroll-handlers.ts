@@ -150,12 +150,11 @@ export function useScrollHandlers<T>(options?: DraggableNodeOptions) {
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       const {x, y} = event.nativeEvent.contentOffset;
       const maxOffsetX = event.nativeEvent.contentSize.width - layout.current.w;
-      const maxOffsetY =
-        event.nativeEvent.contentSize.height - layout.current.h;
 
+      // Store actual offset values, use END only for horizontal scroll edge detection
       offset.current = {
         x: x === maxOffsetX || x > maxOffsetX - 5 ? ScrollState.END : x,
-        y: y === maxOffsetY || y > maxOffsetY - 5 ? ScrollState.END : y,
+        y: y, // Always store actual Y offset to prevent position confusion
       };
     },
     [],
