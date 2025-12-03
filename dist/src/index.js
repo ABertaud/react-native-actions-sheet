@@ -424,6 +424,7 @@ export default forwardRef(function ActionSheet(_a, ref) {
                 currentSnapIndex.current = initialSnapIndex;
                 closing.current = false;
                 initialValue.current = -1;
+                actionSheetOpacity.value = 0;
                 keyboard.reset();
             }
             else {
