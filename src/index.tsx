@@ -181,7 +181,7 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
     });
 
     const opacity = useSharedValue(0);
-    const actionSheetOpacity = useSharedValue(1);
+    const actionSheetOpacity = useSharedValue(0);
     const internalTranslateY = useSharedValue(
       Dimensions.get('window').height * 2,
     );
@@ -253,6 +253,7 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
             easing: Easing.in(Easing.ease),
           });
         } else {
+          actionSheetOpacity.value = 1;
           translateY.value = withSpring(initial, {
             ...config,
             velocity: typeof velocity !== 'number' ? undefined : velocity,

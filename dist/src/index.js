@@ -151,7 +151,7 @@ export default forwardRef(function ActionSheet(_a, ref) {
         },
     }), visible = _3.visible, setVisible = _3.setVisible, visibleRef = _3.visibleRef;
     var opacity = useSharedValue(0);
-    var actionSheetOpacity = useSharedValue(1);
+    var actionSheetOpacity = useSharedValue(0);
     var internalTranslateY = useSharedValue(Dimensions.get('window').height * 2);
     var translateY = animatedPosition || internalTranslateY;
     var underlayTranslateY = useSharedValue(130);
@@ -205,6 +205,7 @@ export default forwardRef(function ActionSheet(_a, ref) {
             });
         }
         else {
+            actionSheetOpacity.value = 1;
             translateY.value = withSpring(initial, __assign(__assign({}, config), { velocity: typeof velocity !== 'number' ? undefined : velocity }));
         }
         notifySnapIndexChanged();
