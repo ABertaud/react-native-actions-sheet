@@ -630,8 +630,8 @@ export default forwardRef(function ActionSheet(_a, ref) {
                     y: absoluteY,
                 };
             }
-            var isFullOpen = getCurrentPosition() === 0;
-            var returnAllNodes = !isFullOpen || (isFullOpen && !isSwipingDown);
+            var isAtFinalSnapPoint = currentSnapIndex.current === snapPoints.length - 1;
+            var returnAllNodes = !isAtFinalSnapPoint || (isAtFinalSnapPoint && !isSwipingDown);
             var activeDraggableNodes = getActiveDraggableNodes(start.x, start.y, returnAllNodes);
             if (enableGesturesInScrollView &&
                 activeDraggableNodes.length > 0 &&
@@ -647,13 +647,13 @@ export default forwardRef(function ActionSheet(_a, ref) {
                  */
                 if (!isSwipingDown) {
                     // Swiping up
-                    if (isFullOpen) {
-                        // Case 2: Sheet fully open, allow scroll
+                    if (isAtFinalSnapPoint) {
+                        // Case 2: Sheet at final snap point, allow scroll
                         scrollable(true);
                         blockPan = true;
                     }
                     else {
-                        // Case 1: Sheet not fully open, allow pan to expand sheet
+                        // Case 1: Sheet not at final snap point, allow pan to expand sheet
                         scrollable(false);
                         blockPan = false;
                     }
@@ -674,8 +674,8 @@ export default forwardRef(function ActionSheet(_a, ref) {
                     else {
                         scrollable(false);
                         blockPan = false;
-                        // Check for refresh control (only when sheet is fully open)
-                        if (isFullOpen) {
+                        // Check for refresh control (only when sheet is at final snap point)
+                        if (isAtFinalSnapPoint) {
                             if (!deltaYOnGestureStart && deltaY > 0) {
                                 deltaYOnGestureStart = deltaY;
                             }

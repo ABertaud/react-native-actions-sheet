@@ -775,8 +775,8 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
           };
         }
 
-        const isFullOpen = getCurrentPosition() === 0;
-        const returnAllNodes = !isFullOpen || (isFullOpen && !isSwipingDown);
+        const isAtFinalSnapPoint = currentSnapIndex.current === snapPoints.length - 1;
+        const returnAllNodes = !isAtFinalSnapPoint || (isAtFinalSnapPoint && !isSwipingDown);
 
         const activeDraggableNodes = getActiveDraggableNodes(
           start.x,
@@ -801,12 +801,12 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
 
           if (!isSwipingDown) {
             // Swiping up
-            if (isFullOpen) {
-              // Case 2: Sheet fully open, allow scroll
+            if (isAtFinalSnapPoint) {
+              // Case 2: Sheet at final snap point, allow scroll
               scrollable(true);
               blockPan = true;
             } else {
-              // Case 1: Sheet not fully open, allow pan to expand sheet
+              // Case 1: Sheet not at final snap point, allow pan to expand sheet
               scrollable(false);
               blockPan = false;
             }
@@ -832,8 +832,8 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
               scrollable(false);
               blockPan = false;
 
-              // Check for refresh control (only when sheet is fully open)
-              if (isFullOpen) {
+              // Check for refresh control (only when sheet is at final snap point)
+              if (isAtFinalSnapPoint) {
                 if (!deltaYOnGestureStart && deltaY > 0) {
                   deltaYOnGestureStart = deltaY;
                 }
