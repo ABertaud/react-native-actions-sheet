@@ -156,6 +156,7 @@ export default forwardRef(function ActionSheet(_a, ref) {
     var translateY = animatedPosition || internalTranslateY;
     var underlayTranslateY = useSharedValue(130);
     var routeOpacity = useSharedValue(0);
+    var scrollEnabled = useSharedValue(initialSnapIndex === snapPoints.length - 1);
     var router = useRouter({
         routes: routes,
         getRef: function () { return getRef(); },
@@ -179,9 +180,11 @@ export default forwardRef(function ActionSheet(_a, ref) {
         var _a;
         if (prevSnapIndex.current !== currentSnapIndex.current) {
             prevSnapIndex.current = currentSnapIndex.current;
+            var isAtFinalSnapPoint = currentSnapIndex.current === snapPoints.length - 1;
+            scrollEnabled.value = isAtFinalSnapPoint;
             (_a = props.onSnapIndexChange) === null || _a === void 0 ? void 0 : _a.call(props, currentSnapIndex.current);
         }
-    }, [props.onSnapIndexChange]);
+    }, [props.onSnapIndexChange, snapPoints.length, scrollEnabled]);
     var moveSheetWithAnimation = React.useCallback(function (velocity, value, min, gestureEnd) {
         var initial = value || initialValue.current;
         var minTranslate = min || minTranslateValue.current;
@@ -255,6 +258,12 @@ export default forwardRef(function ActionSheet(_a, ref) {
     }, [snapPoints]);
     var hardwareBackPressEvent = useRef(null);
     var Root = isModal && !(props === null || props === void 0 ? void 0 : props.backgroundInteractionEnabled) ? Modal : Animated.View;
+    useEffect(function () {
+        if (visible) {
+            var isAtFinalSnapPoint = currentSnapIndex.current === snapPoints.length - 1;
+            scrollEnabled.value = isAtFinalSnapPoint;
+        }
+    }, [visible, snapPoints.length, scrollEnabled]);
     useEffect(function () {
         if (drawUnderStatusBar || props.onChange) {
             var prevPercentage_1 = 0;
@@ -586,28 +595,33 @@ export default forwardRef(function ActionSheet(_a, ref) {
         var isRefreshing = false;
         var offsets = [];
         function scrollable(value) {
-            var _a, _b, _c;
+            var _a, _b;
             for (var i = 0; i < draggableNodes.current.length; i++) {
                 var node = draggableNodes.current[i];
                 var scrollRef = resolveScrollRef(node.ref);
                 if (Platform.OS === 'ios' || Platform.OS === 'web') {
                     if (!value) {
-                        if (!offsets[i] || ((_a = node.offset.current) === null || _a === void 0 ? void 0 : _a.y) === 0) {
-                            offsets[i] = ((_b = node.offset.current) === null || _b === void 0 ? void 0 : _b.y) || 0;
-                        }
-                        if (Platform.OS === 'web') {
-                            scrollRef.scrollTop = offsets[i];
-                        }
-                        else {
-                            scrollRef.scrollTo({
-                                x: 0,
-                                y: offsets[i],
-                                animated: false,
-                            });
+                        var currentOffset = ((_a = node.offset.current) === null || _a === void 0 ? void 0 : _a.y) || 0;
+                        // Only lock scroll position if there's actual scrolled content.
+                        // Don't interrupt bounce animation when at top (offset <= 0).
+                        if (currentOffset > 0) {
+                            if (!offsets[i]) {
+                                offsets[i] = currentOffset;
+                            }
+                            if (Platform.OS === 'web') {
+                                scrollRef.scrollTop = offsets[i];
+                            }
+                            else {
+                                scrollRef.scrollTo({
+                                    x: 0,
+                                    y: offsets[i],
+                                    animated: false,
+                                });
+                            }
                         }
                     }
                     else {
-                        offsets[i] = ((_c = node.offset.current) === null || _c === void 0 ? void 0 : _c.y) || 0;
+                        offsets[i] = ((_b = node.offset.current) === null || _b === void 0 ? void 0 : _b.y) || 0;
                     }
                 }
                 else if (Platform.OS === 'android') {
@@ -664,14 +678,24 @@ export default forwardRef(function ActionSheet(_a, ref) {
                     var touchInScrollableWithContent = activeDraggableNodes.some(function (node) {
                         var _a;
                         var isInsideBounds = isTouchWithinNodeBounds(node.rectWithBoundary, start.y);
-                        var hasScrolledContent = (((_a = node.node.offset.current) === null || _a === void 0 ? void 0 : _a.y) || 0) > 0;
+                        var scrollOffsetY = ((_a = node.node.offset.current) === null || _a === void 0 ? void 0 : _a.y) || 0;
+                        var hasScrolledContent = scrollOffsetY > 0;
+                        // DEBUG: Log scroll state when swiping down
+                        console.log('[ActionSheet Debug] Swipe down check:', {
+                            isInsideBounds: isInsideBounds,
+                            scrollOffsetY: scrollOffsetY.toFixed(2),
+                            hasScrolledContent: hasScrolledContent,
+                            willBlockPan: isInsideBounds && hasScrolledContent,
+                        });
                         return isInsideBounds && hasScrolledContent;
                     });
                     if (touchInScrollableWithContent) {
+                        console.log('[ActionSheet Debug] → BLOCKING PAN (scroll has content)');
                         scrollable(true);
                         blockPan = true;
                     }
                     else {
+                        console.log('[ActionSheet Debug] → ALLOWING PAN (at top, closing sheet)');
                         scrollable(false);
                         blockPan = false;
                         // Check for refresh control (only when sheet is at final snap point)
@@ -978,6 +1002,7 @@ export default forwardRef(function ActionSheet(_a, ref) {
     var context = {
         ref: panGestureRef,
         eventManager: internalEventManager,
+        scrollEnabled: scrollEnabled,
     };
     var animatedOpacityStyle = useAnimatedStyle(function () {
         return {

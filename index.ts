@@ -24,6 +24,7 @@ export {
   ActionSheetRef,
 } from './src/types';
 export {useScrollHandlers} from './src/hooks/use-scroll-handlers';
+export {useScrollBounce} from './src/hooks/use-scroll-bounce';
 export {
   useSheetRouter,
   useSheetRouteParams,

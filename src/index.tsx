@@ -188,6 +188,9 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
     const translateY = animatedPosition || internalTranslateY;
     const underlayTranslateY = useSharedValue(130);
     const routeOpacity = useSharedValue(0);
+    const scrollEnabled = useSharedValue(
+      initialSnapIndex === snapPoints.length - 1,
+    );
     const router = useRouter({
       routes: routes,
       getRef: () => getRef(),
@@ -214,9 +217,12 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
     const notifySnapIndexChanged = React.useCallback(() => {
       if (prevSnapIndex.current !== currentSnapIndex.current) {
         prevSnapIndex.current = currentSnapIndex.current;
+        const isAtFinalSnapPoint =
+          currentSnapIndex.current === snapPoints.length - 1;
+        scrollEnabled.value = isAtFinalSnapPoint;
         props.onSnapIndexChange?.(currentSnapIndex.current);
       }
-    }, [props.onSnapIndexChange]);
+    }, [props.onSnapIndexChange, snapPoints.length, scrollEnabled]);
 
     const moveSheetWithAnimation = React.useCallback(
       (
@@ -329,6 +335,14 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
     const hardwareBackPressEvent = useRef<NativeEventSubscription>(null);
     const Root: React.ElementType =
       isModal && !props?.backgroundInteractionEnabled ? Modal : Animated.View;
+
+    useEffect(() => {
+      if (visible) {
+        const isAtFinalSnapPoint =
+          currentSnapIndex.current === snapPoints.length - 1;
+        scrollEnabled.value = isAtFinalSnapPoint;
+      }
+    }, [visible, snapPoints.length, scrollEnabled]);
 
     useEffect(() => {
       if (drawUnderStatusBar || props.onChange) {
@@ -732,17 +746,22 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
           const scrollRef = resolveScrollRef(node.ref);
           if (Platform.OS === 'ios' || Platform.OS === 'web') {
             if (!value) {
-              if (!offsets[i] || node.offset.current?.y === 0) {
-                offsets[i] = node.offset.current?.y || 0;
-              }
-              if (Platform.OS === 'web') {
-                (scrollRef as HTMLDivElement).scrollTop = offsets[i];
-              } else {
-                scrollRef.scrollTo({
-                  x: 0,
-                  y: offsets[i],
-                  animated: false,
-                });
+              const currentOffset = node.offset.current?.y || 0;
+              // Only lock scroll position if there's actual scrolled content.
+              // Don't interrupt bounce animation when at top (offset <= 0).
+              if (currentOffset > 0) {
+                if (!offsets[i]) {
+                  offsets[i] = currentOffset;
+                }
+                if (Platform.OS === 'web') {
+                  (scrollRef as HTMLDivElement).scrollTop = offsets[i];
+                } else {
+                  scrollRef.scrollTo({
+                    x: 0,
+                    y: offsets[i],
+                    animated: false,
+                  });
+                }
               }
             } else {
               offsets[i] = node.offset.current?.y || 0;
@@ -775,8 +794,10 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
           };
         }
 
-        const isAtFinalSnapPoint = currentSnapIndex.current === snapPoints.length - 1;
-        const returnAllNodes = !isAtFinalSnapPoint || (isAtFinalSnapPoint && !isSwipingDown);
+        const isAtFinalSnapPoint =
+          currentSnapIndex.current === snapPoints.length - 1;
+        const returnAllNodes =
+          !isAtFinalSnapPoint || (isAtFinalSnapPoint && !isSwipingDown);
 
         const activeDraggableNodes = getActiveDraggableNodes(
           start.x,
@@ -819,16 +840,31 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
                   node.rectWithBoundary as RectWithBoundary,
                   start.y,
                 );
-                const hasScrolledContent =
-                  (node.node.offset.current?.y || 0) > 0;
+                const scrollOffsetY = node.node.offset.current?.y || 0;
+                const hasScrolledContent = scrollOffsetY > 0;
+
+                // DEBUG: Log scroll state when swiping down
+                console.log('[ActionSheet Debug] Swipe down check:', {
+                  isInsideBounds,
+                  scrollOffsetY: scrollOffsetY.toFixed(2),
+                  hasScrolledContent,
+                  willBlockPan: isInsideBounds && hasScrolledContent,
+                });
+
                 return isInsideBounds && hasScrolledContent;
               },
             );
 
             if (touchInScrollableWithContent) {
+              console.log(
+                '[ActionSheet Debug] → BLOCKING PAN (scroll has content)',
+              );
               scrollable(true);
               blockPan = true;
             } else {
+              console.log(
+                '[ActionSheet Debug] → ALLOWING PAN (at top, closing sheet)',
+              );
               scrollable(false);
               blockPan = false;
 
@@ -1201,6 +1237,7 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
     const context = {
       ref: panGestureRef,
       eventManager: internalEventManager,
+      scrollEnabled: scrollEnabled,
     };
 
     const animatedOpacityStyle = useAnimatedStyle(() => {

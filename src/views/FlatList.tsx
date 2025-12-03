@@ -1,12 +1,16 @@
-/* eslint-disable curly */
-import React, {RefObject, useImperativeHandle, useState} from 'react';
-import {FlatList as RNGHFlatList} from 'react-native-gesture-handler';
-import {useScrollHandlers} from '../hooks/use-scroll-handlers';
+import React, {RefObject, useCallback, useImperativeHandle} from 'react';
 import {FlatListProps} from 'react-native';
+import {FlatList as RNGHFlatList} from 'react-native-gesture-handler';
+import {useScrollBounce} from '../hooks/use-scroll-bounce';
+import {useScrollHandlers} from '../hooks/use-scroll-handlers';
+
+const DEFAULT_REFRESH_CONTROL_BOUNDARY = 0.15;
+
 type Props<T = any> = FlatListProps<T> &
   React.RefAttributes<RNGHFlatList> & {
     /**
-     * By default refresh control gesture will work in top 15% area of the ScrollView. You can set a different value here.
+     * By default refresh control gesture will work in top 15% area of the ScrollView.
+     * You can set a different value here.
      *
      * Accepts a value between 0-1.
      */
@@ -14,13 +18,36 @@ type Props<T = any> = FlatListProps<T> &
   };
 
 function $FlatList<T>(props: Props<T>, ref: RefObject<RNGHFlatList>) {
-  const handlers = useScrollHandlers<any>({
+  const handlers = useScrollHandlers<RNGHFlatList>({
     hasRefreshControl: !!props.refreshControl,
-    refreshControlBoundary: props.refreshControlGestureArea || 0.15,
+    refreshControlBoundary: props.refreshControlGestureArea ?? DEFAULT_REFRESH_CONTROL_BOUNDARY,
   });
+
+  const bounceHandlers = useScrollBounce({
+    onScrollBeginDrag: props.onScrollBeginDrag,
+    onScrollEndDrag: props.onScrollEndDrag,
+    onMomentumScrollEnd: props.onMomentumScrollEnd,
+  });
+
   useImperativeHandle(ref, () => handlers.ref.current);
-  const [bounces, setBounces] = useState(true);
-  const isInteractingRef = React.useRef(false);
+
+  const handleScroll = useCallback(
+    (event: Parameters<NonNullable<FlatListProps<T>['onScroll']>>[0]) => {
+      handlers.onScroll(event);
+      props.onScroll?.(event);
+    },
+    [handlers, props],
+  );
+
+  const handleLayout = useCallback(
+    (event: Parameters<NonNullable<FlatListProps<T>['onLayout']>>[0]) => {
+      handlers.onLayout();
+      props.onLayout?.(event);
+    },
+    [handlers, props],
+  );
+
+  const isScrollEnabled = handlers.scrollEnabled && props.scrollEnabled !== false;
 
   return (
     <RNGHFlatList
@@ -28,49 +55,18 @@ function $FlatList<T>(props: Props<T>, ref: RefObject<RNGHFlatList>) {
       ref={handlers.ref}
       simultaneousHandlers={handlers.simultaneousHandlers}
       scrollEventThrottle={handlers.scrollEventThrottle}
-      onScrollBeginDrag={event => {
-        isInteractingRef.current = true;
-        // Enable bounces whenever we start scrolling
-        setBounces(true);
-        props.onScrollBeginDrag?.(event);
-      }}
-      onScrollEndDrag={event => {
-        const velocity = event.nativeEvent.velocity?.y || 0;
-        const hasNegativeVelocity = Math.abs(velocity) > 0.1;
-        
-        // If no momentum, interaction might be ending
-        if (!hasNegativeVelocity) {
-          const offsetY = event.nativeEvent.contentOffset.y;
-          if (offsetY <= 0) {
-            isInteractingRef.current = false;
-            setBounces(false);
-          }
-        }
-        props.onScrollEndDrag?.(event);
-      }}
-      onMomentumScrollEnd={event => {
-        isInteractingRef.current = false;
-        const offsetY = event.nativeEvent.contentOffset.y;
-        // Disable bounce only if we're at the top
-        if (offsetY <= 0) {
-          setBounces(false);
-        }
-        props.onMomentumScrollEnd?.(event);
-      }}
-      onScroll={event => {
-        handlers.onScroll(event);
-        props.onScroll?.(event);
-      }}
-      onLayout={event => {
-        handlers.onLayout();
-        props.onLayout?.(event);
-      }}
-      bounces={bounces}
-      alwaysBounceVertical={false}
+      scrollEnabled={isScrollEnabled}
+      onScrollBeginDrag={bounceHandlers.onScrollBeginDrag}
+      onScrollEndDrag={bounceHandlers.onScrollEndDrag}
+      onMomentumScrollEnd={bounceHandlers.onMomentumScrollEnd}
+      onScroll={handleScroll}
+      onLayout={handleLayout}
+      bounces={bounceHandlers.bounces}
+      alwaysBounceVertical={bounceHandlers.alwaysBounceVertical}
     />
   );
 }
 
 export const FlatList = React.forwardRef($FlatList) as <T = any>(
-  props: Props<T> & { ref?: React.Ref<RNGHFlatList> }
+  props: Props<T> & {ref?: React.Ref<RNGHFlatList>},
 ) => React.ReactElement;

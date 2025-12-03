@@ -1,9 +1,10 @@
 import React from 'react';
-import { FlatList as RNGHFlatList } from 'react-native-gesture-handler';
 import { FlatListProps } from 'react-native';
+import { FlatList as RNGHFlatList } from 'react-native-gesture-handler';
 type Props<T = any> = FlatListProps<T> & React.RefAttributes<RNGHFlatList> & {
     /**
-     * By default refresh control gesture will work in top 15% area of the ScrollView. You can set a different value here.
+     * By default refresh control gesture will work in top 15% area of the ScrollView.
+     * You can set a different value here.
      *
      * Accepts a value between 0-1.
      */

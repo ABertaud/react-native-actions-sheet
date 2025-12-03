@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, } from 'react-native';
+import { runOnJS, useAnimatedReaction } from 'react-native-reanimated';
 import { useDraggableNodesContext, usePanGestureContext, } from '../context';
 export var ScrollState = {
     END: -1,
 };
-var InitialLayoutRect = {
+var INITIAL_LAYOUT_RECT = {
     w: 0,
     h: 0,
     x: 0,
@@ -12,17 +13,16 @@ var InitialLayoutRect = {
     px: 0,
     py: 0,
 };
+var LAYOUT_MEASURE_DEBOUNCE_MS = 100;
+var LAYOUT_HEIGHT_PADDING = 10;
 export function resolveScrollRef(ref) {
     var _a, _b, _c, _d, _e, _f;
-    // FlatList
     if ((_a = ref.current) === null || _a === void 0 ? void 0 : _a._listRef) {
         return (_b = ref.current._listRef) === null || _b === void 0 ? void 0 : _b._scrollRef;
     }
-    // FlashList
     if ((_c = ref.current) === null || _c === void 0 ? void 0 : _c.rlvRef) {
         return (_f = (_e = (_d = ref.current) === null || _d === void 0 ? void 0 : _d.rlvRef) === null || _e === void 0 ? void 0 : _e._scrollComponent) === null || _f === void 0 ? void 0 : _f._scrollViewRef;
     }
-    // ScrollView
     return ref.current;
 }
 export function useDraggable(options) {
@@ -30,30 +30,25 @@ export function useDraggable(options) {
     var draggableNodes = useDraggableNodesContext();
     var nodeRef = useRef(null);
     var offset = useRef({ x: 0, y: 0 });
-    var layout = useRef(InitialLayoutRect);
+    var layout = useRef(INITIAL_LAYOUT_RECT);
     useEffect(function () {
-        var pushNode = function () {
+        var _a, _b;
+        var nodeIndex = (_a = draggableNodes.nodes.current) === null || _a === void 0 ? void 0 : _a.findIndex(function (node) { return node.ref === nodeRef; });
+        var nodeNotRegistered = nodeIndex === undefined || nodeIndex === -1;
+        if (nodeNotRegistered) {
+            (_b = draggableNodes.nodes.current) === null || _b === void 0 ? void 0 : _b.push({
+                ref: nodeRef,
+                offset: offset,
+                rect: layout,
+                handlerConfig: options || {},
+            });
+        }
+        return function () {
             var _a, _b;
             var index = (_a = draggableNodes.nodes.current) === null || _a === void 0 ? void 0 : _a.findIndex(function (node) { return node.ref === nodeRef; });
-            if (index === undefined || index === -1) {
-                (_b = draggableNodes.nodes.current) === null || _b === void 0 ? void 0 : _b.push({
-                    ref: nodeRef,
-                    offset: offset,
-                    rect: layout,
-                    handlerConfig: options || {},
-                });
-            }
-        };
-        var popNode = function () {
-            var _a, _b;
-            var index = (_a = draggableNodes.nodes.current) === null || _a === void 0 ? void 0 : _a.findIndex(function (node) { return node.ref === nodeRef; });
-            if (index === undefined || index > -1) {
+            if (index !== undefined && index > -1) {
                 (_b = draggableNodes.nodes.current) === null || _b === void 0 ? void 0 : _b.splice(index, 1);
             }
-        };
-        pushNode();
-        return function () {
-            popNode();
         };
     }, [draggableNodes.nodes, options]);
     return {
@@ -65,69 +60,77 @@ export function useDraggable(options) {
     };
 }
 /**
- * Create a custom scrollable view inside the action sheet.
- * The scrollable view must implement `onScroll`, and `onLayout` props.
+ * Creates scroll handlers for a scrollable view inside an action sheet.
+ * Automatically manages scroll enabling based on sheet snap position.
+ *
  * @example
  * ```tsx
-  const handlers = useScrollHandlers<RNScrollView>();
-  return <NativeViewGestureHandler
-    simultaneousHandlers={handlers.simultaneousHandlers}
-  >
-  <ScrollableView
-    {...handlers}
-  >
-  </ScrollableView>
-  
-  </NativeViewGestureHandler>
+ * const handlers = useScrollHandlers<RNScrollView>();
+ * return (
+ *   <NativeViewGestureHandler simultaneousHandlers={handlers.simultaneousHandlers}>
+ *     <ScrollableView {...handlers} />
+ *   </NativeViewGestureHandler>
+ * );
  * ```
  */
 export function useScrollHandlers(options) {
-    var _a = useState(false), _render = _a[0], _setRender = _a[1];
-    var _b = useDraggable(options), nodeRef = _b.nodeRef, gestureContext = _b.gestureContext, offset = _b.offset, layout = _b.layout;
-    var timer = useRef(null);
-    var subscription = useRef(null);
-    var onMeasure = useCallback(function (x, y, w, h, px, py) {
-        layout.current = {
-            x: x,
-            y: y,
-            w: w,
-            h: h + 10,
-            px: px,
-            py: py,
-        };
-    }, []);
-    var measureAndLayout = React.useCallback(function () {
-        clearTimeout(timer.current);
-        timer.current = setTimeout(function () {
+    var _a = useDraggable(options), nodeRef = _a.nodeRef, gestureContext = _a.gestureContext, offset = _a.offset, layout = _a.layout;
+    var measureTimer = useRef(null);
+    var offsetChangeSubscription = useRef(null);
+    var _b = useState(true), scrollEnabled = _b[0], setScrollEnabled = _b[1];
+    var updateLayout = useCallback(function (x, y, w, h, px, py) {
+        layout.current = { x: x, y: y, w: w, h: h + LAYOUT_HEIGHT_PADDING, px: px, py: py };
+    }, [layout]);
+    var measureAndUpdateLayout = useCallback(function () {
+        if (measureTimer.current) {
+            clearTimeout(measureTimer.current);
+        }
+        measureTimer.current = setTimeout(function () {
             var _a;
-            var ref = resolveScrollRef(nodeRef);
-            if (Platform.OS == 'web') {
-                if (!ref)
-                    return;
-                var rect = ref.getBoundingClientRect();
-                ref.style.overflow = 'auto';
-                onMeasure(rect.x, rect.y, rect.width, rect.height, rect.left, rect.top);
+            var scrollRef = resolveScrollRef(nodeRef);
+            if (!scrollRef)
+                return;
+            if (Platform.OS === 'web') {
+                var rect = scrollRef.getBoundingClientRect();
+                scrollRef.style.overflow = 'auto';
+                updateLayout(rect.x, rect.y, rect.width, rect.height, rect.left, rect.top);
             }
             else {
-                (_a = ref === null || ref === void 0 ? void 0 : ref.measure) === null || _a === void 0 ? void 0 : _a.call(ref, onMeasure);
+                (_a = scrollRef === null || scrollRef === void 0 ? void 0 : scrollRef.measure) === null || _a === void 0 ? void 0 : _a.call(scrollRef, updateLayout);
             }
-        }, 100);
-    }, [nodeRef, onMeasure]);
-    var onLayout = React.useCallback(function () {
+        }, LAYOUT_MEASURE_DEBOUNCE_MS);
+    }, [nodeRef, updateLayout]);
+    var onLayout = useCallback(function () {
         var _a;
-        measureAndLayout();
-        (_a = subscription.current) === null || _a === void 0 ? void 0 : _a.unsubscribe();
-        subscription.current = gestureContext.eventManager.subscribe('onoffsetchange', function () {
-            measureAndLayout();
-        });
-    }, []);
-    var onScroll = React.useCallback(function (event) {
+        measureAndUpdateLayout();
+        (_a = offsetChangeSubscription.current) === null || _a === void 0 ? void 0 : _a.unsubscribe();
+        offsetChangeSubscription.current = gestureContext.eventManager.subscribe('onoffsetchange', measureAndUpdateLayout);
+    }, [measureAndUpdateLayout, gestureContext.eventManager]);
+    var onScroll = useCallback(function (event) {
         var _a = event.nativeEvent.contentOffset, x = _a.x, y = _a.y;
         var maxOffsetX = event.nativeEvent.contentSize.width - layout.current.w;
-        // Store actual offset values, use END only for horizontal scroll edge detection
+        var isAtHorizontalEnd = x >= maxOffsetX - 5;
         offset.current = {
-            x: x === maxOffsetX || x > maxOffsetX - 5 ? ScrollState.END : x,
-            y: y, // Always store actual Y offset to prevent position confusion
+            x: isAtHorizontalEnd ? ScrollState.END : x,
+            y: y,
+        };
+        // DEBUG: Log when near top
+        if (y <= 10 && y >= -50) {
+            console.log('[ScrollHandler Debug] offsetY:', y.toFixed(2));
+        }
+    }, [layout, offset]);
+    useAnimatedReaction(function () { var _a, _b; return (_b = (_a = gestureContext.scrollEnabled) === null || _a === void 0 ? void 0 : _a.value) !== null && _b !== void 0 ? _b : true; }, function (isEnabled, previousValue) {
+        if (isEnabled !== previousValue) {
+            runOnJS(setScrollEnabled)(isEnabled);
+        }
+    }, [gestureContext.scrollEnabled]);
+    useEffect(function () {
+        return function () {
+            var _a;
+            (_a = offsetChangeSubscription.current) === null || _a === void 0 ? void 0 : _a.unsubscribe();
+            if (measureTimer.current) {
+                clearTimeout(measureTimer.current);
+            }
         };
     }, []);
     return {
@@ -136,5 +139,6 @@ export function useScrollHandlers(options) {
         onScroll: onScroll,
         scrollEventThrottle: 1,
         onLayout: onLayout,
+        scrollEnabled: scrollEnabled,
     };
 }

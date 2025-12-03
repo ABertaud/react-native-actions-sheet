@@ -1,4 +1,5 @@
 import {createContext, createRef, RefObject, useContext} from 'react';
+import {SharedValue} from 'react-native-reanimated';
 import {actionSheetEventManager} from './eventmanager';
 
 export type ContentSize = {w: number; h: number};
@@ -11,7 +12,11 @@ export type LayoutRect = {
   py: number;
 };
 
-export const PanGestureRefContext = createContext({
+export const PanGestureRefContext = createContext<{
+  ref: RefObject<any>;
+  eventManager: typeof actionSheetEventManager;
+  scrollEnabled?: SharedValue<boolean>;
+}>({
   ref: createRef<any>(),
   eventManager: actionSheetEventManager,
 });

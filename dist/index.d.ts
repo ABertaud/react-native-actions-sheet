@@ -3,6 +3,7 @@ export { SheetManager, setBaseZIndexForActionSheets, getSheetStack, isRenderedOn
 export { registerSheet, SheetProps, SheetProvider, useProviderContext, useSheetIDContext, useSheetRef, useSheetPayload, SheetRegister, SheetRegisterProps, SheetRefContext } from './src/provider';
 export { ActionSheetProps, SheetDefinition, Sheets, ActionSheetRef, } from './src/types';
 export { useScrollHandlers } from './src/hooks/use-scroll-handlers';
+export { useScrollBounce } from './src/hooks/use-scroll-bounce';
 export { useSheetRouter, useSheetRouteParams, Route, RouteScreenProps, Router, RouteDefinition, } from './src/hooks/use-router';
 export { ScrollView } from './src/views/ScrollView';
 export { FlatList } from './src/views/FlatList';

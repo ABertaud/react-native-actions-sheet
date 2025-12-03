@@ -1,4 +1,4 @@
-import React, {useCallback} from 'react';
+import React, {useCallback, useEffect} from 'react';
 import {Text, View} from 'react-native';
 import ActionSheet, {ScrollView, useSheetRef} from 'react-native-actions-sheet';
 import {FlashList} from '@shopify/flash-list';
@@ -89,8 +89,14 @@ function FlashListSheet() {
     ),
     [],
   );
+
+  useEffect(() => {
+    // Show the sheet on mount to simulate persistent behavior
+    ref.current?.show();
+  }, []);
+
   return (
-    <ActionSheet gestureEnabled>
+    <ActionSheet gestureEnabled snapPoints={[50, 100]} ref={ref}>
       <View
         style={{
           paddingHorizontal: 12,

@@ -1,4 +1,6 @@
 import { RefObject } from 'react';
+import { SharedValue } from 'react-native-reanimated';
+import { actionSheetEventManager } from './eventmanager';
 export type ContentSize = {
     w: number;
     h: number;
@@ -13,7 +15,8 @@ export type LayoutRect = {
 };
 export declare const PanGestureRefContext: import("react").Context<{
     ref: RefObject<any>;
-    eventManager: import("./eventmanager").default;
+    eventManager: typeof actionSheetEventManager;
+    scrollEnabled?: SharedValue<boolean>;
 }>;
 export type DraggableNodeOptions = {
     hasRefreshControl?: boolean;
@@ -21,7 +24,8 @@ export type DraggableNodeOptions = {
 };
 export declare const usePanGestureContext: () => {
     ref: RefObject<any>;
-    eventManager: import("./eventmanager").default;
+    eventManager: typeof actionSheetEventManager;
+    scrollEnabled?: SharedValue<boolean>;
 };
 export type NodesRef = {
     offset: RefObject<{
