@@ -156,7 +156,10 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
     });
     const dimensionsRef = useRef(dimensions);
     dimensionsRef.current = dimensions;
-    const containerStyle = StyleSheet.flatten(props.containerStyle);
+    const containerStyle = React.useMemo(
+      () => StyleSheet.flatten(props.containerStyle),
+      [props.containerStyle],
+    );
 
     const {visible, setVisible, visibleRef} = useSheetManager({
       id: sheetId,
@@ -1225,11 +1228,14 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
       [routeOpacity, router, sheetPayload],
     );
 
-    const context = {
-      ref: panGestureRef,
-      eventManager: internalEventManager,
-      scrollEnabled: scrollEnabled,
-    };
+    const context = React.useMemo(
+      () => ({
+        ref: panGestureRef,
+        eventManager: internalEventManager,
+        scrollEnabled: scrollEnabled,
+      }),
+      [internalEventManager, scrollEnabled],
+    );
 
     const animatedOpacityStyle = useAnimatedStyle(() => {
       return {

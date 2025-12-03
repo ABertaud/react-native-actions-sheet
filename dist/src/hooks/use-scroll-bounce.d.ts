@@ -4,6 +4,7 @@ type BounceCallbacks = {
     onScrollBeginDrag?: (event: ScrollEvent) => void;
     onScrollEndDrag?: (event: ScrollEvent) => void;
     onMomentumScrollEnd?: (event: ScrollEvent) => void;
+    onScroll?: (event: ScrollEvent) => void;
 };
 /**
  * Manages bounce behavior for scrollable components inside action sheets.
@@ -15,6 +16,7 @@ export declare function useScrollBounce(callbacks?: BounceCallbacks): {
     onScrollBeginDrag: (event: ScrollEvent) => void;
     onScrollEndDrag: (event: ScrollEvent) => void;
     onMomentumScrollEnd: (event: ScrollEvent) => void;
+    onScroll: (event: ScrollEvent) => void;
 };
 export {};
 //# sourceMappingURL=use-scroll-bounce.d.ts.map

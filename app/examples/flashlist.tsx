@@ -97,7 +97,11 @@ function FlashListSheet() {
   }, []);
 
   return (
-    <ActionSheet gestureEnabled snapPoints={[50, 100]} ref={ref}>
+    <ActionSheet
+      gestureEnabled
+      snapPoints={[50, 100]}
+      ref={ref}
+      springOffset={1}>
       <View
         style={{
           paddingHorizontal: 12,

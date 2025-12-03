@@ -3,6 +3,7 @@ import {NativeScrollEvent, NativeSyntheticEvent} from 'react-native';
 
 const VELOCITY_THRESHOLD = 0.1;
 const TOP_THRESHOLD = 5;
+const BOUNCE_ACTIVATION_THRESHOLD = 10;
 
 type ScrollEvent = NativeSyntheticEvent<NativeScrollEvent>;
 
@@ -10,6 +11,7 @@ type BounceCallbacks = {
   onScrollBeginDrag?: (event: ScrollEvent) => void;
   onScrollEndDrag?: (event: ScrollEvent) => void;
   onMomentumScrollEnd?: (event: ScrollEvent) => void;
+  onScroll?: (event: ScrollEvent) => void;
 };
 
 /**
@@ -17,20 +19,37 @@ type BounceCallbacks = {
  * Disables bounce when scroll is at top to allow sheet gesture handling.
  */
 export function useScrollBounce(callbacks?: BounceCallbacks) {
-  const [bounces, setBounces] = useState(true);
+  const [bounces, setBounces] = useState(false);
   const isInteracting = useRef(false);
+  const startOffsetY = useRef(0);
 
   const onScrollBeginDrag = useCallback(
     (event: ScrollEvent) => {
       isInteracting.current = true;
-      const offsetY = event.nativeEvent.contentOffset.y;
-      // If we're in overscroll (bounce), keep bounce disabled to prevent conflicts
-      if (offsetY >= 0) {
-        setBounces(true);
-      }
+      startOffsetY.current = event.nativeEvent.contentOffset.y;
       callbacks?.onScrollBeginDrag?.(event);
     },
     [callbacks],
+  );
+
+  const onScroll = useCallback(
+    (event: ScrollEvent) => {
+      if (!isInteracting.current) {
+        callbacks?.onScroll?.(event);
+        return;
+      }
+
+      const offsetY = event.nativeEvent.contentOffset.y;
+
+      // Only enable bounce when user has scrolled down enough from a position above threshold
+      // This prevents bounce from activating when at top and swiping down
+      if (offsetY > BOUNCE_ACTIVATION_THRESHOLD && !bounces) {
+        setBounces(true);
+      }
+
+      callbacks?.onScroll?.(event);
+    },
+    [callbacks, bounces],
   );
 
   const onScrollEndDrag = useCallback(
@@ -68,5 +87,6 @@ export function useScrollBounce(callbacks?: BounceCallbacks) {
     onScrollBeginDrag,
     onScrollEndDrag,
     onMomentumScrollEnd,
+    onScroll,
   };
 }

@@ -4,6 +4,7 @@ import React, {
   RefObject,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -198,13 +199,18 @@ const RenderSheet = ({id, context}: {id: string; context: string}) => {
     };
   }, []);
 
+  const sheetProps = useMemo(
+    () => ({sheetId: id, payload, overrideProps}),
+    [id, payload, overrideProps],
+  );
+
   if (!Sheet) return null;
 
   return !visible ? null : (
     <SheetIDContext.Provider value={id}>
       <SheetRefContext.Provider value={ref}>
         <SheetPayloadContext.Provider value={payload}>
-          <Sheet sheetId={id} payload={payload} overrideProps={overrideProps} />
+          <Sheet {...sheetProps} />
         </SheetPayloadContext.Provider>
       </SheetRefContext.Provider>
     </SheetIDContext.Provider>

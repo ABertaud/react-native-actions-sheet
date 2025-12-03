@@ -1,4 +1,4 @@
-import React, {RefObject, useCallback, useImperativeHandle} from 'react';
+import React, {RefObject, useCallback, useImperativeHandle, useMemo} from 'react';
 import {FlatListProps} from 'react-native';
 import {FlatList as RNGHFlatList} from 'react-native-gesture-handler';
 import {useScrollBounce} from '../hooks/use-scroll-bounce';
@@ -23,20 +23,26 @@ function $FlatList<T>(props: Props<T>, ref: RefObject<RNGHFlatList>) {
     refreshControlBoundary: props.refreshControlGestureArea ?? DEFAULT_REFRESH_CONTROL_BOUNDARY,
   });
 
-  const bounceHandlers = useScrollBounce({
-    onScrollBeginDrag: props.onScrollBeginDrag,
-    onScrollEndDrag: props.onScrollEndDrag,
-    onMomentumScrollEnd: props.onMomentumScrollEnd,
-  });
+  const bounceCallbacks = useMemo(
+    () => ({
+      onScrollBeginDrag: props.onScrollBeginDrag,
+      onScrollEndDrag: props.onScrollEndDrag,
+      onMomentumScrollEnd: props.onMomentumScrollEnd,
+      onScroll: props.onScroll,
+    }),
+    [props.onScrollBeginDrag, props.onScrollEndDrag, props.onMomentumScrollEnd, props.onScroll],
+  );
+
+  const bounceHandlers = useScrollBounce(bounceCallbacks);
 
   useImperativeHandle(ref, () => handlers.ref.current);
 
   const handleScroll = useCallback(
     (event: Parameters<NonNullable<FlatListProps<T>['onScroll']>>[0]) => {
       handlers.onScroll(event);
-      props.onScroll?.(event);
+      bounceHandlers.onScroll(event);
     },
-    [handlers, props],
+    [handlers, bounceHandlers],
   );
 
   const handleLayout = useCallback(
@@ -44,7 +50,7 @@ function $FlatList<T>(props: Props<T>, ref: RefObject<RNGHFlatList>) {
       handlers.onLayout();
       props.onLayout?.(event);
     },
-    [handlers, props],
+    [handlers.onLayout, props.onLayout],
   );
 
   const isScrollEnabled = handlers.scrollEnabled && props.scrollEnabled !== false;

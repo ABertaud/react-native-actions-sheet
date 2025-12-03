@@ -133,7 +133,7 @@ export function useScrollHandlers(options) {
         ref: nodeRef,
         simultaneousHandlers: [gestureContext.ref],
         onScroll: onScroll,
-        scrollEventThrottle: 1,
+        scrollEventThrottle: 16,
         onLayout: onLayout,
         scrollEnabled: scrollEnabled,
     };

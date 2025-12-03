@@ -180,7 +180,7 @@ export function useScrollHandlers<T>(options?: DraggableNodeOptions) {
     ref: nodeRef,
     simultaneousHandlers: [gestureContext.ref],
     onScroll,
-    scrollEventThrottle: 1,
+    scrollEventThrottle: 16,
     onLayout,
     scrollEnabled,
   };

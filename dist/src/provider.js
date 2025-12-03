@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState, } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState, } from 'react';
 import { actionSheetEventManager } from './eventmanager';
 export var providerRegistryStack = [];
 /**
@@ -166,12 +166,13 @@ var RenderSheet = function (_a) {
             subs.forEach(function (s) { return s.unsubscribe(); });
         };
     }, []);
+    var sheetProps = useMemo(function () { return ({ sheetId: id, payload: payload, overrideProps: overrideProps }); }, [id, payload, overrideProps]);
     if (!Sheet)
         return null;
     return !visible ? null : (<SheetIDContext.Provider value={id}>
       <SheetRefContext.Provider value={ref}>
         <SheetPayloadContext.Provider value={payload}>
-          <Sheet sheetId={id} payload={payload} overrideProps={overrideProps}/>
+          <Sheet {...sheetProps}/>
         </SheetPayloadContext.Provider>
       </SheetRefContext.Provider>
     </SheetIDContext.Provider>);

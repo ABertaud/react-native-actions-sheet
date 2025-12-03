@@ -127,7 +127,7 @@ export default forwardRef(function ActionSheet(_a, ref) {
     }), dimensions = _2[0], setDimensions = _2[1];
     var dimensionsRef = useRef(dimensions);
     dimensionsRef.current = dimensions;
-    var containerStyle = StyleSheet.flatten(props.containerStyle);
+    var containerStyle = React.useMemo(function () { return StyleSheet.flatten(props.containerStyle); }, [props.containerStyle]);
     var _3 = useSheetManager({
         id: sheetId,
         onHide: function (data) {
@@ -995,11 +995,11 @@ export default forwardRef(function ActionSheet(_a, ref) {
             </RouterParamsContext.Provider>
           </Animated.View>);
     }, [routeOpacity, router, sheetPayload]);
-    var context = {
+    var context = React.useMemo(function () { return ({
         ref: panGestureRef,
         eventManager: internalEventManager,
         scrollEnabled: scrollEnabled,
-    };
+    }); }, [internalEventManager, scrollEnabled]);
     var animatedOpacityStyle = useAnimatedStyle(function () {
         return {
             opacity: opacity.value,
