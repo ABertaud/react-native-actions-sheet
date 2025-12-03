@@ -851,9 +851,6 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
               scrollable(true);
               blockPan = true;
             } else {
-              console.log(
-                '[ActionSheet Debug] → ALLOWING PAN (at top, closing sheet)',
-              );
               scrollable(false);
               blockPan = false;
 

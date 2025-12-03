@@ -687,7 +687,6 @@ export default forwardRef(function ActionSheet(_a, ref) {
                         blockPan = true;
                     }
                     else {
-                        console.log('[ActionSheet Debug] → ALLOWING PAN (at top, closing sheet)');
                         scrollable(false);
                         blockPan = false;
                         // Check for refresh control (only when sheet is at final snap point)
