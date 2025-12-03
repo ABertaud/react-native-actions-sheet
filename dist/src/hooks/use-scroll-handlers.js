@@ -114,10 +114,6 @@ export function useScrollHandlers(options) {
             x: isAtHorizontalEnd ? ScrollState.END : x,
             y: y,
         };
-        // DEBUG: Log when near top
-        if (y <= 10 && y >= -50) {
-            console.log('[ScrollHandler Debug] offsetY:', y.toFixed(2));
-        }
     }, [layout, offset]);
     useAnimatedReaction(function () { var _a, _b; return (_b = (_a = gestureContext.scrollEnabled) === null || _a === void 0 ? void 0 : _a.value) !== null && _b !== void 0 ? _b : true; }, function (isEnabled, previousValue) {
         if (isEnabled !== previousValue) {

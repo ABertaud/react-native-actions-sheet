@@ -120,7 +120,14 @@ export function useScrollHandlers<T>(options?: DraggableNodeOptions) {
       if (Platform.OS === 'web') {
         const rect = (scrollRef as HTMLDivElement).getBoundingClientRect();
         (scrollRef as HTMLDivElement).style.overflow = 'auto';
-        updateLayout(rect.x, rect.y, rect.width, rect.height, rect.left, rect.top);
+        updateLayout(
+          rect.x,
+          rect.y,
+          rect.width,
+          rect.height,
+          rect.left,
+          rect.top,
+        );
       } else {
         (scrollRef as NativeMethods)?.measure?.(updateLayout);
       }
@@ -146,11 +153,6 @@ export function useScrollHandlers<T>(options?: DraggableNodeOptions) {
         x: isAtHorizontalEnd ? ScrollState.END : x,
         y,
       };
-
-      // DEBUG: Log when near top
-      if (y <= 10 && y >= -50) {
-        console.log('[ScrollHandler Debug] offsetY:', y.toFixed(2));
-      }
     },
     [layout, offset],
   );

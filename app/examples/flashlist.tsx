@@ -80,9 +80,10 @@ function FlashListSheet() {
         style={{
           color: 'black',
           fontSize: 20,
-          height: 40,
           verticalAlign: 'middle',
           width: '100%',
+          height: 504,
+          backgroundColor: 'red',
         }}>
         {item}
       </Text>

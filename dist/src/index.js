@@ -680,17 +680,9 @@ export default forwardRef(function ActionSheet(_a, ref) {
                         var isInsideBounds = isTouchWithinNodeBounds(node.rectWithBoundary, start.y);
                         var scrollOffsetY = ((_a = node.node.offset.current) === null || _a === void 0 ? void 0 : _a.y) || 0;
                         var hasScrolledContent = scrollOffsetY > 0;
-                        // DEBUG: Log scroll state when swiping down
-                        console.log('[ActionSheet Debug] Swipe down check:', {
-                            isInsideBounds: isInsideBounds,
-                            scrollOffsetY: scrollOffsetY.toFixed(2),
-                            hasScrolledContent: hasScrolledContent,
-                            willBlockPan: isInsideBounds && hasScrolledContent,
-                        });
                         return isInsideBounds && hasScrolledContent;
                     });
                     if (touchInScrollableWithContent) {
-                        console.log('[ActionSheet Debug] → BLOCKING PAN (scroll has content)');
                         scrollable(true);
                         blockPan = true;
                     }

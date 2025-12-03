@@ -843,22 +843,11 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
                 const scrollOffsetY = node.node.offset.current?.y || 0;
                 const hasScrolledContent = scrollOffsetY > 0;
 
-                // DEBUG: Log scroll state when swiping down
-                console.log('[ActionSheet Debug] Swipe down check:', {
-                  isInsideBounds,
-                  scrollOffsetY: scrollOffsetY.toFixed(2),
-                  hasScrolledContent,
-                  willBlockPan: isInsideBounds && hasScrolledContent,
-                });
-
                 return isInsideBounds && hasScrolledContent;
               },
             );
 
             if (touchInScrollableWithContent) {
-              console.log(
-                '[ActionSheet Debug] → BLOCKING PAN (scroll has content)',
-              );
               scrollable(true);
               blockPan = true;
             } else {
