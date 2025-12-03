@@ -585,7 +585,6 @@ export default forwardRef(function ActionSheet(_a, ref) {
         var oldValue = 0;
         var isRefreshing = false;
         var offsets = [];
-        var previousScrollOffsets = new Map();
         function scrollable(value) {
             var _a, _b, _c;
             for (var i = 0; i < draggableNodes.current.length; i++) {
@@ -620,7 +619,6 @@ export default forwardRef(function ActionSheet(_a, ref) {
         }
         var blockPan = false;
         var onChange = function (absoluteX, absoluteY, translationY) {
-            var _a, _b, _c;
             if (!gestureEnabled)
                 return;
             var deltaY = translationY;
@@ -631,52 +629,20 @@ export default forwardRef(function ActionSheet(_a, ref) {
                     x: absoluteX,
                     y: absoluteY,
                 };
-                // Store scroll offsets at gesture start
-                previousScrollOffsets = new Map(draggableNodes.current.map(function (node) { return [
-                    node.ref,
-                    node.offset.current.y || 0,
-                ]; }));
             }
             var isFullOpen = getCurrentPosition() === 0;
             var returnAllNodes = !isFullOpen || (isFullOpen && !isSwipingDown);
             var activeDraggableNodes = getActiveDraggableNodes(start.x, start.y, returnAllNodes);
-            // DEBUG: Log gesture state
-            var allNodes = getActiveDraggableNodes(start.x, start.y, true);
-            var touchInsideScrollable = allNodes.some(function (n) {
-                return start.y >= n.rectWithBoundary.py &&
-                    start.y <= n.rectWithBoundary.boundryY;
-            });
-            console.log('[GESTURE DEBUG]', {
-                touchY: Math.round(start.y),
-                scrollableArea: allNodes.length > 0
-                    ? {
-                        top: Math.round(allNodes[0].rectWithBoundary.py),
-                        bottom: Math.round(allNodes[0].rectWithBoundary.boundryY),
-                    }
-                    : null,
-                touchInsideScrollable: touchInsideScrollable,
-                scrollOffset: (_c = (_b = (_a = allNodes[0]) === null || _a === void 0 ? void 0 : _a.node.offset.current) === null || _b === void 0 ? void 0 : _b.y) !== null && _c !== void 0 ? _c : 0,
-                isFullOpen: isFullOpen,
-            });
             if (enableGesturesInScrollView &&
                 activeDraggableNodes.length > 0 &&
                 !isRefreshing) {
-                // Check if scroll is actively changing during the gesture (not just having an offset)
-                var nodeIsScrolling = activeDraggableNodes.some(function (node) {
-                    var _a;
-                    var currentOffset = node.node.offset.current.y || 0;
-                    var previousOffset = (_a = previousScrollOffsets.get(node.node.ref)) !== null && _a !== void 0 ? _a : currentOffset;
-                    var isActuallyScrolling = currentOffset !== previousOffset;
-                    previousScrollOffsets.set(node.node.ref, currentOffset);
-                    return isActuallyScrolling;
-                });
                 /**
                  * Draggable nodes handling cases:
                  * 1. Sheet not fully open, swiping up: allow pan (sheet moves up)
                  * 2. Sheet fully open, swiping up: allow scroll (content scrolls)
-                 * 3. Sheet not fully open OR fully open, swiping down:
-                 *    - If scroll is active AND touch is in scrollable area: allow scroll
-                 *    - Otherwise: allow pan (sheet moves down / closes)
+                 * 3. Swiping down:
+                 *    - If touch is IN scrollable area AND it has scrolled content: allow scroll
+                 *    - If touch is OUTSIDE scrollable area: allow pan (close sheet)
                  * 4. Refresh control: if in refresh zone, allow scroll for pull-to-refresh
                  */
                 if (!isSwipingDown) {
@@ -693,19 +659,15 @@ export default forwardRef(function ActionSheet(_a, ref) {
                     }
                 }
                 else {
-                    // Swiping down (cases 3 & 4)
-                    var isTouchInScrollableArea = nodeIsScrolling &&
-                        activeDraggableNodes.some(function (node) {
-                            return isTouchWithinNodeBounds(node.rectWithBoundary, start.y);
-                        });
-                    // DEBUG: Log swiping down decision
-                    console.log('[SWIPE DOWN DEBUG]', {
-                        nodeIsScrolling: nodeIsScrolling,
-                        isTouchInScrollableArea: isTouchInScrollableArea,
-                        touchY: start.y,
-                        willBlockPan: isTouchInScrollableArea,
+                    // Swiping down (case 3)
+                    // Check if touch is inside a scrollable area that has scrolled content
+                    var touchInScrollableWithContent = activeDraggableNodes.some(function (node) {
+                        var _a;
+                        var isInsideBounds = isTouchWithinNodeBounds(node.rectWithBoundary, start.y);
+                        var hasScrolledContent = (((_a = node.node.offset.current) === null || _a === void 0 ? void 0 : _a.y) || 0) > 0;
+                        return isInsideBounds && hasScrolledContent;
                     });
-                    if (isTouchInScrollableArea) {
+                    if (touchInScrollableWithContent) {
                         scrollable(true);
                         blockPan = true;
                     }
@@ -782,6 +744,7 @@ export default forwardRef(function ActionSheet(_a, ref) {
             if (!gestureEnabled)
                 return;
             deltaYOnGestureStart = 0;
+            start = undefined;
             var isMovingUp = getCurrentPosition() < initialValue.current;
             scrollable(true);
             if ((!isMovingUp &&
