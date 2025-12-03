@@ -425,6 +425,9 @@ export default forwardRef(function ActionSheet(_a, ref) {
                 closing.current = false;
                 initialValue.current = -1;
                 actionSheetOpacity.value = 0;
+                actionSheetHeight.current = 0;
+                minTranslateValue.current = 0;
+                sheetHeightRef.current = 0;
                 keyboard.reset();
             }
             else {

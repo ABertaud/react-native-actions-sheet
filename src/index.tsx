@@ -537,6 +537,9 @@ export default forwardRef<ActionSheetRef, ActionSheetProps>(
             closing.current = false;
             initialValue.current = -1;
             actionSheetOpacity.value = 0;
+            actionSheetHeight.current = 0;
+            minTranslateValue.current = 0;
+            sheetHeightRef.current = 0;
             keyboard.reset();
           } else {
             opacity.value = 1;
